@@ -35,15 +35,29 @@ print(f"Cleaned rows = {len(clean_df)}\n")
 print(f"Outliers removed = {len(df) - len(clean_df)}")
 
 data_to_scale = ['mileage','mileage_per_year','vehicle_age','engine_hp']
-
 clean_df[data_to_scale] = scale.fit_transform(clean_df[data_to_scale])
 
+print(clean_df.columns)
+clean_df.drop(columns=['make', 'model', 'trim'], inplace=True)
 print(clean_df.head())
 
-corr_matrix = clean_df.corr()
+sns.set_context("paper", font_scale=1.5)
 
-# Plot it
-plt.figure(figsize=(12, 8))
-sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-plt.title("Feature Correlation with Price")
-plt.savefig('correlation.png')
+# 2. Define a much larger figure size (Width, Height in inches)
+plt.figure(figsize=(25, 20))
+
+# 3. Increase annotation size using annot_kws
+# 'fmt' determines decimal places, 'annot_kws' sets font properties
+sns.heatmap(clean_df.corr(numeric_only=True), 
+            annot=True, 
+            cmap='coolwarm', 
+            fmt='.2f', 
+            annot_kws={"size": 12},  # Size of numbers inside the boxes
+            linewidths=1)          # Adds spacing between elements for clarity
+
+plt.title("Enhanced Feature Correlation Heatmap", fontsize=25)
+plt.xticks(rotation=45, ha='right')  # Tilts x-axis labels for better fit
+
+# Since you mentioned the FigureCanvasAgg warning earlier:
+plt.savefig('large_heatmap.png', dpi=300, bbox_inches='tight')
+print("Heatmap saved as large_heatmap.png")

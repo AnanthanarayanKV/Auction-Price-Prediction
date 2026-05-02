@@ -1,59 +1,41 @@
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
 
-OHE = OneHotEncoder()
 
 def dataCleaning():
-    #Loading my data into python
+    # ── Load raw data ──────────────────────────────────────────────────────────
     df = pd.read_csv("vehicle_price_prediction.csv")
+    print("\nPre Cleaning – missing values:\n", df.isnull().sum())
 
-    print("\nPre Cleaning",df.isnull().sum())
-    #there are no missing values except None in accident_history.
-    #In this context None is a valid value implying there has been no accident previously.
-
+    # ── Missing values ─────────────────────────────────────────────────────────
+    # None in accident_history means no prior accident – fill is more useful
     df['accident_history'] = df['accident_history'].fillna("No_Accident")
 
-    #mapping the needed columns to be encoded
-    
+    # ── Ordinal encoding ───────────────────────────────────────────────────────
+    condition_map = {'Excellent': 2, 'Good': 1, 'Fair': 0}
+    accident_map  = {'No_Accident': 2, 'Minor': 1, 'Major': 0}
+
+    df['condition']        = df['condition'].map(condition_map)
+    df['accident_history'] = df['accident_history'].map(accident_map)
+
+    # ── Composite spec column ──────────────────────────────────────────────────
     df['full_spec'] = df['make'] + "_" + df['model'] + "_" + df['trim']
 
-    spec_means = df.groupby('full_spec')['price'].mean()
-    df['spec_encoded'] = df['full_spec'].map(spec_means)
-    
-    condition_map = {
-        'Excellent': 2,
-        'Good': 1,
-        'Fair': 0
-    }
+    # ── One-hot encoding ───────────────────────────────────────────────────────
+    # transmission: typically 2-3 values (Manual / Automatic / CVT) – OHE fine
+    # Colors are already simplified to ~8-12 values – OHE fine
+    ohe_cols = [
+        'transmission',
+        'fuel_type', 'drivetrain', 'body_type',
+        'seller_type', 'exterior_color', 'interior_color'
+    ]
+    df = pd.get_dummies(df, columns=ohe_cols, drop_first=True)
 
-    accident_map = {
-        'No_Accident':2,
-        'Minor':1,
-        'Major':0
-    }
+    # ── 'make', 'model', 'trim', 'full_spec' kept as raw strings ──────────────
 
-    #encoding the columns in dataset
-    
-    # Convert Fuel, Drive-train, and Body Type at once
-    df= pd.get_dummies(df, columns=['fuel_type', 'drivetrain', 'body_type','seller_type','exterior_color','interior_color'],drop_first=True)
-    
-    df['condition'] = df['condition'].map(condition_map)
-    df['accident_history'] = df['accident_history'].map(accident_map)
-    model_means = df.groupby('model')['price'].mean()
-    df['model_encoded'] = df['model'].map(model_means)
-    print(df.columns)
-    df.drop(['fuel_type', 'drivetrain', 'body_type', 'seller_type', 'full_spec'], axis=1, errors='ignore', inplace=True)
-    print(df.columns)
-    
-    # print("\n--- First 5 Rows ---")
-    # print(df_final.head())
-    # print(df_final.tail())
+    # ── Save ───────────────────────────────────────────────────────────────────
+    df.to_csv('cleaned_data.csv', index=False)
+    print("\nCleaning complete. Columns:\n", list(df.columns))
 
-    df.to_csv('cleaned_data.csv')
 
-    #print("\nPost cleaning",df_final.isnull().sum())
-    
-    
 if __name__ == '__main__':
     dataCleaning()

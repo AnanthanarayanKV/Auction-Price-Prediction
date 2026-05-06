@@ -6,13 +6,12 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, mean_absolute_percentage_error
 
 from cleaning import dataCleaning
 
-# ── 1. Load (or generate) cleaned data ────────────────────────────────────────
+# ── 1. Loading cleaned data ────────────────────────────────────────
 path = Path("cleaned_data.csv")
 if path.is_file():
     print("Cleaned data found – loading.")
@@ -22,7 +21,7 @@ else:
 
 df = pd.read_csv('cleaned_data.csv')
 
-# ── 2. Remove price outliers (IQR method) ─────────────────────────────────────
+# ── 2. Removing price outliers using IQR method ─────────────────────────────────────
 Q1 = df['price'].quantile(0.25)
 Q3 = df['price'].quantile(0.75)
 
@@ -33,7 +32,7 @@ df = df[(df['price'] >= Q1 - 1.5 * IQR) & (df['price'] <= Q3 + 1.5 * IQR)].copy(
 
 print(f"\nRows after outlier removal: {len(df):,}")
 
-# ── 3. Define feature groups ───────────────────────────────────────────────────
+# ── 3. Defining feature groups ───────────────────────────────────────────────────
 # String columns that will be mean-encoded in step 5
 string_cols = ['make', 'model', 'trim', 'full_spec']
 
@@ -59,8 +58,6 @@ X_num = df[feature_cols]         # numeric + OHE boolean cols
 X_train_num, X_test_num,X_train_str, X_test_str, y_train, y_test = train_test_split(X_num, X_str, y, test_size=0.2, random_state=42)
 
 # ── 5. Mean encoding – fitted on training fold only ────────────────────────────
-# Encodes each string col as the average price of that category,
-# computed from training labels only → no leakage into test set.
 def mean_encode(train_X, test_X, train_y, col, new_col):
     means       = train_y.groupby(train_X[col]).mean()
     global_mean = train_y.mean()   # fallback for unseen categories
@@ -70,7 +67,6 @@ def mean_encode(train_X, test_X, train_y, col, new_col):
 mean_encode(X_train_str, X_test_str, y_train, 'full_spec', 'spec_encoded')
 mean_encode(X_train_str, X_test_str, y_train, 'model',     'model_encoded')
 mean_encode(X_train_str, X_test_str, y_train, 'make',      'make_encoded')
-# 'trim' is already captured inside full_spec, so we skip it here
 
 # Attach mean-encoded columns to the numeric feature frames
 for col in ['spec_encoded', 'model_encoded', 'make_encoded']:
@@ -107,7 +103,7 @@ plt.savefig('large_heatmap.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("Heatmap saved to large_heatmap.png")
 
-# ── 8. Model – Polynomial Regression (degree 2) ────────────────────────────────
+# ── 8. Model – Random Forest ────────────────────────────────
 y_train_log = np.log1p(y_train)
 rf_model = RandomForestRegressor(n_estimators = 100,max_depth = 20,min_samples_leaf= 5,n_jobs = -1,random_state = 42)
 rf_model.fit(X_train, y_train_log)

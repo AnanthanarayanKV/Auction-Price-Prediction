@@ -3,13 +3,17 @@ import pandas as pd
 
 def dataCleaning():
     # ── Load raw data ──────────────────────────────────────────────────────────
-    df = pd.read_csv("vehicle_price_prediction.csv")
-    print("\nPre Cleaning – missing values:\n", df.isnull().sum())
+    df = pd.read_csv("car_auction_data.csv")
+    print("\nPre Cleaning – missing values:\n", df.isnull().sum().sum())
 
     # ── Missing values ─────────────────────────────────────────────────────────
     # None in accident_history means no prior accident – fill is more useful
     df['accident_history'] = df['accident_history'].fillna("No_Accident")
-
+    df['price'] = df['price'].fillna(df['price'].mean())
+    df['mileage'] = df['mileage'].fillna(df['mileage'].mean())
+    df['mileage_per_year'] = df['mileage_per_year'].fillna(df['mileage_per_year'].mean())
+    df['engine_hp'] = df['engine_hp'].fillna(df['engine_hp'].mean())
+    
     # ── Ordinal encoding ───────────────────────────────────────────────────────
     condition_map = {'Excellent': 2, 'Good': 1, 'Fair': 0}
     accident_map  = {'No_Accident': 2, 'Minor': 1, 'Major': 0}
@@ -19,10 +23,10 @@ def dataCleaning():
 
     # ── Composite spec column ──────────────────────────────────────────────────
     df['full_spec'] = df['make'] + "_" + df['model'] + "_" + df['trim']
+    spec_means = df.groupby('full_spec')['price'].mean()
+    df['spec_encoded'] = df['full_spec'].map(spec_means)
 
     # ── One-hot encoding ───────────────────────────────────────────────────────
-    # transmission: typically 2-3 values (Manual / Automatic / CVT) – OHE fine
-    # Colors are already simplified to ~8-12 values – OHE fine
     ohe_cols = [
         'transmission',
         'fuel_type', 'drivetrain', 'body_type',
@@ -35,6 +39,7 @@ def dataCleaning():
     # ── Save ───────────────────────────────────────────────────────────────────
     df.to_csv('cleaned_data.csv', index=False)
     print("\nCleaning complete. Columns:\n", list(df.columns))
+    print("\nPost Cleaning – missing values:\n", df.isnull().sum().sum())
 
 
 if __name__ == '__main__':
